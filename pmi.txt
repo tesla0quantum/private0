@@ -1,0 +1,68 @@
+LAB01:
+Napredni mrežni servisi
+=======================
+1. Povecavanje DHCP raspona (SERVERDC)
+	DHCP --> Domena --> IPv4 --> Right Click on Scope --> Properties
+2. Instalacija dodatnog DHCP posluzitelja (SERVER1)
+	a) Server Manager --> Manage --> Add Roles and features --> DHCP Server [x]
+3. Dodavanje novog DHCP posluzitelja u DHCP konzolu na SERVERDC (SERVERDC)
+	a) Right Click on DHCP --> Ass Server : server1.racunarstvo.edu
+4. Podjela DHCP raspona na pola
+	a) DHCP --> Domena --> IPv4
+	b) Right Click on Scope --> Advanced --> Split-Scope
+	c) Additional DHCP Server: server1.racunarstvo.edu --> Add
+5. Brisanje raspona izuzetih adresa ukoliko ga imamo da bi se mogao konfigurirati DHCP failover
+6. Brisanje dodijeljenog raspona na SERVER1 (SERVER1)
+7. Konfiguracija DHCP failover-a (SERVERDC)
+	a) DHCP --> Domena --> IPv4 --> Right Click on Scope --> Configure Failover
+	b) Partner Server: server1.racunarstvo.edu
+	c) Relationship Name: Racunarstvo, Maximum Client Lead Time: 0h:15min, Mode: Load Balance, Load Balance Percentage: 50%, Shared Secret: Pa$$w0rd
+8. Konfiguracija naprednih DNS opcija (SERVERDC)
+	a) Potpisivanje DNS zone: DNS --> SERVERDC --> Right Click on racunarstvo.edu --> DNSSEC --> Sign the zone
+9. Group Policy --> Novi GP (SERVERDC)
+	a) Ime: DNSSEC
+	b) Computer Configuration --> Policies --> Windows Settings --> Name Resolution Policy --> Suffix: racunarstvo.edu, Tab: DNSSEC --> [x] Enable DNSSEC in this rule
+10. Raspon DNS portova
+	a) Get-DNSServer
+	b) dnscmd /config /socketpoolsize 3000
+	c) Restart DNS servisa: DNS konzola --> Right Click on SERVERDC --> All Tasks --> Restart
+11. Zakljucavanje DNS Cache-a
+	a) Set-DnsServerCache 70000 (70kb)
+
+LAB02:
+iSCSI skladište podataka
+========================
+1. Konfiguracija diskovnog sustava (SERVERDC)
+	a) iSCSI Initiator --> Properties --> TAB: Configuration --> Initiator Name: Select --> Copy into ClipBoard
+	b) Notepad --> Paste from Clipboard --> Save: ShareDC\string.txt
+2. Priprema diskova (SERVER1)
+	a) diskpart --> list disk
+	b) select disk 1
+	   online disk
+	   attributes disk clear readonly
+	   select disk 2
+	   online disk
+	   ...
+	   select disk 3
+	   online disk
+	   ...
+	c) list disk
+	d) RAID-5 (pretvaranje diskova u dinamicke)
+	   select disk 1
+	   convert dynamic
+	   select disk 2
+	   convert dynamic
+	   select disk 3
+	   convert dynamic
+	e) RAID-5 (kreiranje RAID polja)
+	   select disk 1
+	   create volume raid disk=1,2,3
+	   format fs=ntfs quick label=RAID
+	   assign letter=e
+	   detail volume
+3. Instalacija iSCSI Target Server role (SERVER1)
+	a) Server Manager --> Manage --> Add Roles and Features --> File and Storage Services --> File and iSCSI Services --> iSCSI Target Server, Features --> Multipath I/O
+4. Konfiguracija iSCSI Target Servera (SERVER1)
+	a) Server Manager --> File and Storage Services --> iSCSI --> Tasks --> New iSCSI Virtual Disk --> Select by Volume: Disk E:, Name: ServerDC, disk za ServerDC, Size: 5GB, Dinamically Expanding, New iSCSI Target --> Name: ServerDC, Specify Access Servers --> Add --> IQN: <Paste from string.txt>
+5. Provjera funkcionalnosti (SERVERDC)
+	a) iSCSI Initiator Properties --> Targer: server1.racunarstvo.edu --> Quick Connect
